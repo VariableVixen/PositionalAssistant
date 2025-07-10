@@ -9,29 +9,29 @@ using Dalamud.Interface.Windowing;
 
 using ImGuiNET;
 
-namespace PrincessRTFM.PositionalGuide;
+namespace VariableVixen.PositionalGuide;
 
 public class ConfigWindow: Window, IDisposable {
 	public const float InactiveOptionAlpha = 0.5f;
 
-	private const ImGuiWindowFlags flags = ImGuiWindowFlags.None
+	private const ImGuiWindowFlags WindowFlags = ImGuiWindowFlags.None
 		//| ImGuiWindowFlags.NoScrollbar
 		//| ImGuiWindowFlags.NoScrollWithMouse
 		| ImGuiWindowFlags.AlwaysAutoResize;
-	private const int ptrMemWidth = sizeof(short);
+	private const int PtrMemWidth = sizeof(short);
 
-	private readonly IntPtr stepPtr;
-	private readonly IntPtr minBoundingPtr;
-	private readonly IntPtr maxBoundingPtr;
-	private readonly IntPtr minModifierPtr;
-	private readonly IntPtr maxModifierPtr;
-	private readonly IntPtr minThicknessPtr;
-	private readonly IntPtr maxThicknessPtr;
-	private readonly IntPtr minOuterCircleRangePtr;
-	private readonly IntPtr maxOuterCircleRangePtr;
-	private readonly IntPtr negativeOnePtr;
-	private readonly IntPtr negativeTwoPtr;
-	private readonly IntPtr maxTetherLengthPtr;
+	private readonly nint stepPtr;
+	private readonly nint minBoundingPtr;
+	private readonly nint maxBoundingPtr;
+	private readonly nint minModifierPtr;
+	private readonly nint maxModifierPtr;
+	private readonly nint minThicknessPtr;
+	private readonly nint maxThicknessPtr;
+	private readonly nint minOuterCircleRangePtr;
+	private readonly nint maxOuterCircleRangePtr;
+	private readonly nint negativeOnePtr;
+	private readonly nint negativeTwoPtr;
+	private readonly nint maxTetherLengthPtr;
 
 	private bool disposed;
 
@@ -39,9 +39,9 @@ public class ConfigWindow: Window, IDisposable {
 	public delegate void SettingsUpdate();
 	public event SettingsUpdate? OnSettingsUpdate;
 
-	public ConfigWindow(Plugin core) : base(Plugin.Name, flags) {
+	public ConfigWindow(Plugin core) : base(Plugin.Name, WindowFlags) {
 		this.RespectCloseHotkey = true;
-		this.TitleBarButtons = new() {
+		this.TitleBarButtons = [
 			new() {
 				Priority = 0,
 				Icon = FontAwesomeIcon.Heart,
@@ -64,7 +64,7 @@ public class ConfigWindow: Window, IDisposable {
 					ImGui.EndTooltip();
 				},
 			}
-		};
+		];
 		this.AllowClickthrough = true;
 		this.AllowPinning = true;
 		this.SizeConstraints = new() {
@@ -73,30 +73,30 @@ public class ConfigWindow: Window, IDisposable {
 
 		this.conf = core.Config;
 
-		this.stepPtr = Marshal.AllocHGlobal(ptrMemWidth);
-		this.minBoundingPtr = Marshal.AllocHGlobal(ptrMemWidth);
-		this.maxBoundingPtr = Marshal.AllocHGlobal(ptrMemWidth);
-		this.minModifierPtr = Marshal.AllocHGlobal(ptrMemWidth);
-		this.maxModifierPtr = Marshal.AllocHGlobal(ptrMemWidth);
-		this.minThicknessPtr = Marshal.AllocHGlobal(ptrMemWidth);
-		this.maxThicknessPtr = Marshal.AllocHGlobal(ptrMemWidth);
-		this.minOuterCircleRangePtr = Marshal.AllocHGlobal(ptrMemWidth);
-		this.maxOuterCircleRangePtr = Marshal.AllocHGlobal(ptrMemWidth);
-		this.negativeOnePtr = Marshal.AllocHGlobal(ptrMemWidth);
-		this.negativeTwoPtr = Marshal.AllocHGlobal(ptrMemWidth);
-		this.maxTetherLengthPtr = Marshal.AllocHGlobal(ptrMemWidth);
-		Marshal.Copy(BitConverter.GetBytes((short)1), 0, this.stepPtr, ptrMemWidth);
-		Marshal.Copy(BitConverter.GetBytes((short)byte.MinValue), 0, this.minBoundingPtr, ptrMemWidth);
-		Marshal.Copy(BitConverter.GetBytes((short)byte.MaxValue), 0, this.maxBoundingPtr, ptrMemWidth);
-		Marshal.Copy(BitConverter.GetBytes((short)sbyte.MinValue), 0, this.minModifierPtr, ptrMemWidth);
-		Marshal.Copy(BitConverter.GetBytes((short)sbyte.MaxValue), 0, this.maxModifierPtr, ptrMemWidth);
-		Marshal.Copy(BitConverter.GetBytes((short)1), 0, this.minThicknessPtr, ptrMemWidth);
-		Marshal.Copy(BitConverter.GetBytes((short)5), 0, this.maxThicknessPtr, ptrMemWidth);
-		Marshal.Copy(BitConverter.GetBytes((short)byte.MinValue), 0, this.minOuterCircleRangePtr, ptrMemWidth);
-		Marshal.Copy(BitConverter.GetBytes((short)byte.MaxValue), 0, this.maxOuterCircleRangePtr, ptrMemWidth);
-		Marshal.Copy(BitConverter.GetBytes((short)-1), 0, this.negativeOnePtr, ptrMemWidth);
-		Marshal.Copy(BitConverter.GetBytes((short)-2), 0, this.negativeTwoPtr, ptrMemWidth);
-		Marshal.Copy(BitConverter.GetBytes((short)32), 0, this.maxTetherLengthPtr, ptrMemWidth);
+		this.stepPtr = Marshal.AllocHGlobal(PtrMemWidth);
+		this.minBoundingPtr = Marshal.AllocHGlobal(PtrMemWidth);
+		this.maxBoundingPtr = Marshal.AllocHGlobal(PtrMemWidth);
+		this.minModifierPtr = Marshal.AllocHGlobal(PtrMemWidth);
+		this.maxModifierPtr = Marshal.AllocHGlobal(PtrMemWidth);
+		this.minThicknessPtr = Marshal.AllocHGlobal(PtrMemWidth);
+		this.maxThicknessPtr = Marshal.AllocHGlobal(PtrMemWidth);
+		this.minOuterCircleRangePtr = Marshal.AllocHGlobal(PtrMemWidth);
+		this.maxOuterCircleRangePtr = Marshal.AllocHGlobal(PtrMemWidth);
+		this.negativeOnePtr = Marshal.AllocHGlobal(PtrMemWidth);
+		this.negativeTwoPtr = Marshal.AllocHGlobal(PtrMemWidth);
+		this.maxTetherLengthPtr = Marshal.AllocHGlobal(PtrMemWidth);
+		Marshal.Copy(BitConverter.GetBytes((short)1), 0, this.stepPtr, PtrMemWidth);
+		Marshal.Copy(BitConverter.GetBytes((short)byte.MinValue), 0, this.minBoundingPtr, PtrMemWidth);
+		Marshal.Copy(BitConverter.GetBytes((short)byte.MaxValue), 0, this.maxBoundingPtr, PtrMemWidth);
+		Marshal.Copy(BitConverter.GetBytes((short)sbyte.MinValue), 0, this.minModifierPtr, PtrMemWidth);
+		Marshal.Copy(BitConverter.GetBytes((short)sbyte.MaxValue), 0, this.maxModifierPtr, PtrMemWidth);
+		Marshal.Copy(BitConverter.GetBytes((short)1), 0, this.minThicknessPtr, PtrMemWidth);
+		Marshal.Copy(BitConverter.GetBytes((short)5), 0, this.maxThicknessPtr, PtrMemWidth);
+		Marshal.Copy(BitConverter.GetBytes((short)byte.MinValue), 0, this.minOuterCircleRangePtr, PtrMemWidth);
+		Marshal.Copy(BitConverter.GetBytes((short)byte.MaxValue), 0, this.maxOuterCircleRangePtr, PtrMemWidth);
+		Marshal.Copy(BitConverter.GetBytes((short)-1), 0, this.negativeOnePtr, PtrMemWidth);
+		Marshal.Copy(BitConverter.GetBytes((short)-2), 0, this.negativeTwoPtr, PtrMemWidth);
+		Marshal.Copy(BitConverter.GetBytes((short)32), 0, this.maxTetherLengthPtr, PtrMemWidth);
 	}
 
 	public override void Draw() {
@@ -105,20 +105,20 @@ public class ConfigWindow: Window, IDisposable {
 		bool changed = false;
 
 		bool[] drawing = this.conf.DrawGuides;
-		bool[] circleColours = new bool[] {
+		bool[] circleColours = [
 			this.conf.AlwaysUseCircleColours,
 			this.conf.AlwaysUseCircleColoursTarget,
 			this.conf.AlwaysUseCircleColoursOuter,
-		};
-		bool[] limitRender = new bool[] {
+		];
+		bool[] limitRender = [
 			this.conf.OnlyRenderWhenEitherEndOnScreen,
 			this.conf.OnlyRenderWhenCentreOnScreen,
 			this.conf.OnlyRenderWhenEndpointOnScreen,
-		};
+		];
 		Vector4[] colours = this.conf.LineColours;
 
 		// used to chunk-copy values for the sliders in the config window, since ImGui uses pointers to the values
-		short[] hack = new short[] {
+		short[] hack = [
 			this.conf.ExtraDrawRange,
 			this.conf.MinDrawRange,
 			this.conf.MaxDrawRange,
@@ -126,11 +126,11 @@ public class ConfigWindow: Window, IDisposable {
 			this.conf.OuterCircleRange,
 			this.conf.TetherLengthInner,
 			this.conf.TetherLengthOuter,
-		};
-		IntPtr[] ptrs = new IntPtr[hack.Length];
+		];
+		nint[] ptrs = new nint[hack.Length];
 		for (int i = 0; i < hack.Length; ++i) {
-			ptrs[i] = Marshal.AllocHGlobal(ptrMemWidth);
-			Marshal.Copy(BitConverter.GetBytes(hack[i]), 0, ptrs[i], ptrMemWidth);
+			ptrs[i] = Marshal.AllocHGlobal(PtrMemWidth);
+			Marshal.Copy(BitConverter.GetBytes(hack[i]), 0, ptrs[i], PtrMemWidth);
 		}
 
 		bool active = this.conf.Enabled;
@@ -193,8 +193,8 @@ public class ConfigWindow: Window, IDisposable {
 		// now we do the 3x3 for guidelines and the target ring
 		ImGui.TextUnformatted("\nWhich guidelines do you want, and in what colours?");
 		foreach (int i in new int[] { 7, 0, 1,
-			                          6, 8, 2, 9,
-			                          5, 4, 3 }) { // awful ugly hack, sorry
+									  6, 8, 2, 9,
+									  5, 4, 3 }) { // awful ugly hack, sorry
 			changed |= ImGui.Checkbox($"###drawGuide{i}", ref drawing[i]);
 			utils.Tooltip($"Draw the {Configuration.Directions[i]}?");
 			ImGui.SameLine();

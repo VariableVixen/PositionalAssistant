@@ -5,7 +5,7 @@ using Dalamud.Configuration;
 
 using Newtonsoft.Json;
 
-namespace PrincessRTFM.PositionalGuide;
+namespace VariableVixen.PositionalGuide;
 
 public class Configuration: IPluginConfiguration {
 	public const int
@@ -19,7 +19,7 @@ public class Configuration: IPluginConfiguration {
 		IndexFrontLeft = 7,
 		IndexCircle = 8,
 		IndexOuterCircle = 9;
-	public static readonly string[] Directions = new string[] {
+	public static readonly string[] Directions = [
 		"front guideline",
 		"front right guideline",
 		"right guideline",
@@ -30,7 +30,7 @@ public class Configuration: IPluginConfiguration {
 		"front left guideline",
 		"target circle",
 		"outer circle",
-	};
+	];
 
 	public int Version { get; set; } = 1;
 
@@ -49,7 +49,7 @@ public class Configuration: IPluginConfiguration {
 	/// <summary>
 	/// Starts at front then goes clockwise up to index=7, then circle at index=8
 	/// </summary>
-	public bool[] DrawGuides { get; set; } = new bool[] {
+	public bool[] DrawGuides { get; set; } = [
 		false, // front
 		false, // front right
 		false, // right
@@ -60,7 +60,7 @@ public class Configuration: IPluginConfiguration {
 		false, // front left
 		false, // circle
 		false, // outer circle
-	};
+	];
 
 	public short ExtraDrawRange { get; set; } = 0;
 	public short MinDrawRange { get; set; } = 0;
@@ -75,7 +75,7 @@ public class Configuration: IPluginConfiguration {
 	/// <summary>
 	/// Starts at front then goes clockwise up to index=7, then circle at index=8 and outer circle at index=9
 	/// </summary>
-	public Vector4[] LineColours { get; set; } = new Vector4[] {
+	public Vector4[] LineColours { get; set; } = [
 		new(1, 0, 0, 1), // front
 		new(1, 0, 0, 1), // front right
 		new(0, 0, 1, 1), // right
@@ -86,7 +86,7 @@ public class Configuration: IPluginConfiguration {
 		new(1, 0, 0, 1), // front left
 		new(1, 1, 0, 1), // circle default
 		new(1, 1, 0, 1), // outer circle default
-	};
+	];
 
 	public void Update() {
 		int initalLength = this.DrawGuides.Length;
@@ -94,12 +94,10 @@ public class Configuration: IPluginConfiguration {
 			bool[] guides = new bool[10];
 			Array.Copy(this.DrawGuides, guides, this.DrawGuides.Length);
 
-			if (initalLength < 9) {
+			if (initalLength < 9)
 				guides[8] = false;
-			}
-			if (initalLength < 10) {
+			if (initalLength < 10)
 				guides[9] = false;
-			}
 
 			this.DrawGuides = guides;
 		}
@@ -109,12 +107,10 @@ public class Configuration: IPluginConfiguration {
 			Vector4[] colours = new Vector4[10];
 			Array.Copy(this.LineColours, colours, this.LineColours.Length);
 
-			if (initalLength < 9) {
+			if (initalLength < 9)
 				colours[8] = new Vector4(1, 1, 0, 1);
-			}
-			if (initalLength < 10) {
+			if (initalLength < 10)
 				colours[9] = new Vector4(1, 1, 0, 1);
-			}
 
 			this.LineColours = colours;
 		}

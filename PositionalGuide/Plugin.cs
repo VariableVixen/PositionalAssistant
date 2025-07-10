@@ -8,7 +8,6 @@ using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.ClientState.Objects.Types;
 using Dalamud.Game.Gui.Dtr;
-using Dalamud.Interface.ImGuiNotification;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
@@ -18,17 +17,17 @@ using Dalamud.Utility.Numerics;
 
 using ImGuiNET;
 
-namespace PrincessRTFM.PositionalGuide;
+namespace VariableVixen.PositionalGuide;
 
 public class Plugin: IDalamudPlugin {
 	public const string Command = "/posguide";
 
-	private const int circleSegmentCount = 128;
+	private const int CircleSegmentCount = 128;
 	// lineIndexToRad and circleSegmentIdxToRad are fixed and only need to be calculated once at the start,
 	// since neither the number of lines nor the number of circle segments change
 	private readonly float[] lineIndexToAngle = Enumerable.Range(Configuration.IndexFront, Configuration.IndexFrontLeft + 1).Select(idx => (float)(idx * Math.PI / 4)).ToArray();
-	private readonly float[] circleSegmentIdxToAngle = Enumerable.Range(0, circleSegmentCount).Select(idx => (float)(idx * (2.0 * Math.PI / circleSegmentCount))).ToArray();
-	private readonly Vector4[] circleSegmentIdxToColour = new Vector4[circleSegmentCount];
+	private readonly float[] circleSegmentIdxToAngle = Enumerable.Range(0, CircleSegmentCount).Select(idx => (float)(idx * (2.0 * Math.PI / CircleSegmentCount))).ToArray();
+	private readonly Vector4[] circleSegmentIdxToColour = new Vector4[CircleSegmentCount];
 
 	private enum CircleTypes { Target, Outer };
 
@@ -57,7 +56,7 @@ public class Plugin: IDalamudPlugin {
 		this.Config.Update();
 
 		this.configWindow = new(this);
-		this.configWindow.OnSettingsUpdate += this.SettingsUpdated;
+		this.configWindow.OnSettingsUpdate += this.settingsUpdated;
 		this.windowSystem = new(this.GetType().Namespace!);
 		this.windowSystem.AddWindow(this.configWindow);
 
@@ -67,42 +66,41 @@ public class Plugin: IDalamudPlugin {
 		});
 
 		this.dtrEntry = dtrBar.Get(Name);
-		this.SetDtrText();
+		this.setDtrText();
 		this.dtrEntry.Tooltip = "Click to toggle all rendering";
-		this.dtrEntry.OnClick = this.DtrClickHandler;
+		this.dtrEntry.OnClick = this.dtrClickHandler;
 
 		Interface.UiBuilder.OpenConfigUi += this.ToggleConfigUi;
 		Interface.UiBuilder.Draw += this.Draw;
-		this.UpdateCircleColours();
+		this.updateCircleColours();
 	}
 
-	private void SettingsUpdated() {
-		this.SetDtrText();
-		this.UpdateCircleColours();
+	private void settingsUpdated() {
+		this.setDtrText();
+		this.updateCircleColours();
 	}
 
-	private void DtrClickHandler() {
+	private void dtrClickHandler() {
 		this.Config.Enabled = !this.Config.Enabled;
-		this.SetDtrText();
+		this.setDtrText();
 	}
 
-	private void SetDtrText() => this.dtrEntry.Text = $"{DTRDisplayName}: {(this.Config.Enabled ? "On" : "Off")}";
+	private void setDtrText() => this.dtrEntry.Text = $"{DTRDisplayName}: {(this.Config.Enabled ? "On" : "Off")}";
 
-	private void UpdateCircleColours() {
+	private void updateCircleColours() {
 		// fill a list containing the index and angle of all active lines, for every circle segment look which line is closest to it in terms of angleDifference
 		// and use the color of that line, only needs to be done once as long as settings stay the same
-		List<(int index, float angle)> lineIndexesAndAngles = new();
+		List<(int index, float angle)> lineIndexesAndAngles = [];
 		for (int i = Configuration.IndexFront; i <= Configuration.IndexFrontLeft; ++i) {
 			if (this.Config.DrawGuides[i])
 				lineIndexesAndAngles.Add((i, this.lineIndexToAngle[i]));
 		}
 
-		if (lineIndexesAndAngles.Count == 0) {
+		if (lineIndexesAndAngles.Count == 0)
 			return;
-		}
 
 		for (int i = 0; i < this.circleSegmentIdxToAngle.Length; ++i) {
-			(int index, float angle) = lineIndexesAndAngles.OrderBy(item => AngleDifference(this.circleSegmentIdxToAngle[i], item.angle)).First();
+			(int index, float angle) = lineIndexesAndAngles.OrderBy(item => angleDifference(this.circleSegmentIdxToAngle[i], item.angle)).First();
 			this.circleSegmentIdxToColour[i] = this.Config.LineColours[index];
 		}
 	}
@@ -176,7 +174,7 @@ public class Plugin: IDalamudPlugin {
 				continue;
 			anyLineActive = true;
 
-			Vector3 rotated = RotatePoint(targetPos, guidelineBasePoint2, targetFacing + this.lineIndexToAngle[lineIndex]);
+			Vector3 rotated = rotatePoint(targetPos, guidelineBasePoint2, targetFacing + this.lineIndexToAngle[lineIndex]);
 			bool endpointOnScreen = Gui.WorldToScreen(rotated, out Vector2 coord);
 			if (limitEither) {
 				if (!targetOnScreen && !endpointOnScreen)
@@ -188,24 +186,21 @@ public class Plugin: IDalamudPlugin {
 			drawing.AddLine(centre, coord, ImGui.GetColorU32(this.Config.LineColours[lineIndex]), this.Config.LineThickness);
 		}
 
-		if (this.Config.DrawCircle) {
-			this.DrawCircle(drawing, targetPos, circleBasePoint, targetFacing, anyLineActive, CircleTypes.Target);
-		}
+		if (this.Config.DrawCircle)
+			this.drawCircle(drawing, targetPos, circleBasePoint, targetFacing, anyLineActive, CircleTypes.Target);
 
-		if (this.Config.DrawOuterCircle) {
-			this.DrawCircle(drawing, targetPos, circleBasePoint, targetFacing, anyLineActive, CircleTypes.Outer);
-
-		}
+		if (this.Config.DrawOuterCircle)
+			this.drawCircle(drawing, targetPos, circleBasePoint, targetFacing, anyLineActive, CircleTypes.Outer);
 
 		// the tether line itself used to be pretty simple: from our position to the target's
 		// then I decided to allow controlling the maximum length of it and suddenly everything got Complicated
 		if (this.Config.DrawTetherLine && target != player) {
 
 			// radians between DUE SOUTH (angle=0) and PLAYER POSITION using TARGET POSITION as the vertex
-			double angleToPlayer = AngleBetween(targetPos, targetPos + Vector3.UnitZ, playerPos);
+			double angleToPlayer = angleBetween(targetPos, targetPos + Vector3.UnitZ, playerPos);
 
 			// radians between DUE SOUTH (angle=0) and TARGET POSITION using PLAYER POSITION as the vertex
-			double angleToTarget = AngleBetween(playerPos, playerPos + Vector3.UnitZ, targetPos);
+			double angleToTarget = angleBetween(playerPos, playerPos + Vector3.UnitZ, targetPos);
 
 			// the scalar offset from the target position towards their target ring, in the direction DUE SOUTH (angle=0)
 			// if set distance is -1, point is the centre of the target, so offset is 0
@@ -216,14 +211,14 @@ public class Plugin: IDalamudPlugin {
 			// the world position for the tether's inner point, as the offset point rotated around the centre to face the player
 			Vector3 tetherInner = offset == 0
 				? targetPos
-				: RotatePoint(targetPos, targetPos + new Vector3(0, 0, offset), angleToPlayer);
+				: rotatePoint(targetPos, targetPos + new Vector3(0, 0, offset), angleToPlayer);
 
 			// the world position for the tether's outer point, extending the set distance from the target's ring in the direction of the player
 			// or, if set distance is -1, to the player's centre; if -2, to the edge of the player's ring
 			Vector3 tetherOuter = this.Config.TetherLengthOuter switch {
-				-2 => RotatePoint(playerPos, playerPos + new Vector3(0, 0, player.HitboxRadius), angleToTarget),
+				-2 => rotatePoint(playerPos, playerPos + new Vector3(0, 0, player.HitboxRadius), angleToTarget),
 				-1 => playerPos,
-				_ => RotatePoint(targetPos, targetPos + new Vector3(0, 0, target.HitboxRadius + this.Config.SoftOuterTetherLength), angleToPlayer).WithY(playerPos.Y),
+				_ => rotatePoint(targetPos, targetPos + new Vector3(0, 0, target.HitboxRadius + this.Config.SoftOuterTetherLength), angleToPlayer).WithY(playerPos.Y),
 			};
 
 			if (this.Config.FlattenTether)
@@ -252,7 +247,7 @@ public class Plugin: IDalamudPlugin {
 		ImGui.End();
 	}
 
-	private void DrawCircle(ImDrawListPtr drawing, Vector3 targetPos, Vector3 basePoint, float targetFacing, bool anyLineActive, CircleTypes circleType) {
+	private void drawCircle(ImDrawListPtr drawing, Vector3 targetPos, Vector3 basePoint, float targetFacing, bool anyLineActive, CircleTypes circleType) {
 		Vector4 circleColour = new(1, 0, 0, 1);
 		Vector3 circleBasePoint = basePoint;
 		bool forceCircleColour = false;
@@ -269,8 +264,8 @@ public class Plugin: IDalamudPlugin {
 				break;
 		}
 
-		Vector3 startPoint = RotatePoint(targetPos, circleBasePoint, targetFacing);
-		Vector3[] points = CirclePoints(targetPos, startPoint, this.circleSegmentIdxToAngle).ToArray();
+		Vector3 startPoint = rotatePoint(targetPos, circleBasePoint, targetFacing);
+		Vector3[] points = circlePoints(targetPos, startPoint, this.circleSegmentIdxToAngle).ToArray();
 
 		(Vector2 point, bool render)[] screenPoints = new (Vector2 point, bool render)[points.Length];
 		for (int i = 0; i < points.Length; ++i) {
@@ -292,7 +287,7 @@ public class Plugin: IDalamudPlugin {
 		}
 	}
 
-	private static Vector2 RotatePoint(Vector2 centre, Vector2 originalPoint, double angleRadians) {
+	private static Vector2 rotatePoint(Vector2 centre, Vector2 originalPoint, double angleRadians) {
 		// Adapted (read: shamelessly stolen) from https://github.com/PunishedPineapple/Distance
 
 		Vector2 translatedOriginPoint = originalPoint - centre;
@@ -304,21 +299,21 @@ public class Plugin: IDalamudPlugin {
 			((float)Math.Sin(translatedAngle + angleRadians) * distance) + centre.Y
 		);
 	}
-	private static Vector3 RotatePoint(Vector3 centre, Vector3 originalPoint, double angleRadians) {
-		Vector2 rotated = RotatePoint(new Vector2(centre.X, centre.Z), new Vector2(originalPoint.X, originalPoint.Z), angleRadians);
+	private static Vector3 rotatePoint(Vector3 centre, Vector3 originalPoint, double angleRadians) {
+		Vector2 rotated = rotatePoint(new Vector2(centre.X, centre.Z), new Vector2(originalPoint.X, originalPoint.Z), angleRadians);
 		return new(rotated.X, centre.Y, rotated.Y);
 	}
 
-	private static double AngleBetween(Vector2 vertex, Vector2 a, Vector2 b) => Math.Atan2(b.Y - vertex.Y, b.X - vertex.X) - Math.Atan2(a.Y - vertex.Y, a.X - vertex.X);
-	private static double AngleBetween(Vector3 vertex, Vector3 a, Vector3 b) => AngleBetween(new Vector2(vertex.X, vertex.Z), new Vector2(a.X, a.Z), new Vector2(b.X, b.Z));
-	private static float AngleDifference(float a, float b) => (float)Math.Min(Math.Abs(a - b), Math.Abs(Math.Abs(a - b) - (2 * Math.PI)));
+	private static double angleBetween(Vector2 vertex, Vector2 a, Vector2 b) => Math.Atan2(b.Y - vertex.Y, b.X - vertex.X) - Math.Atan2(a.Y - vertex.Y, a.X - vertex.X);
+	private static double angleBetween(Vector3 vertex, Vector3 a, Vector3 b) => angleBetween(new Vector2(vertex.X, vertex.Z), new Vector2(a.X, a.Z), new Vector2(b.X, b.Z));
+	private static float angleDifference(float a, float b) => (float)Math.Min(Math.Abs(a - b), Math.Abs(Math.Abs(a - b) - (2 * Math.PI)));
 
-	private static IEnumerable<Vector2> CirclePoints(Vector2 centre, Vector2 start, float[] angles) {
+	private static IEnumerable<Vector2> circlePoints(Vector2 centre, Vector2 start, float[] angles) {
 		foreach (float angle in angles)
-			yield return RotatePoint(centre, start, angle);
+			yield return rotatePoint(centre, start, angle);
 	}
-	private static IEnumerable<Vector3> CirclePoints(Vector3 centre, Vector3 start, float[] angles)
-		=> CirclePoints(new Vector2(centre.X, centre.Z), new Vector2(start.X, start.Z), angles).Select(v2 => new Vector3(v2.X, centre.Y, v2.Y));
+	private static IEnumerable<Vector3> circlePoints(Vector3 centre, Vector3 start, float[] angles)
+		=> circlePoints(new Vector2(centre.X, centre.Z), new Vector2(start.X, start.Z), angles).Select(v2 => new Vector3(v2.X, centre.Y, v2.Y));
 
 	internal void OnPluginCommand(string command, string arguments) {
 		string[] args = arguments.Trim().Split();
@@ -464,7 +459,7 @@ public class Plugin: IDalamudPlugin {
 				return;
 		}
 
-		this.SettingsUpdated();
+		this.settingsUpdated();
 		Interface.SavePluginConfig(this.Config);
 	}
 
@@ -486,7 +481,7 @@ public class Plugin: IDalamudPlugin {
 		if (disposing) {
 			Interface.UiBuilder.OpenConfigUi -= this.ToggleConfigUi;
 			Interface.UiBuilder.Draw -= this.Draw;
-			this.configWindow.OnSettingsUpdate -= this.SettingsUpdated;
+			this.configWindow.OnSettingsUpdate -= this.settingsUpdated;
 
 			Commands.RemoveHandler(Command);
 
