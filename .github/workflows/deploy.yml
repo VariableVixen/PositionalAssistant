@@ -92,8 +92,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Submit pull request
-      uses: daemitus/DalamudPluginPR2@master
+      uses: SheepGoMeh/DalamudPluginPR2@master
       with:
         token: ${{ secrets.PAT }}
         plugin_name: ${{ env.INTERNAL_NAME }}
         plugin_owners: VariableVixen
+        enabled: "bump version for release"
