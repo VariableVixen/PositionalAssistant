@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
+using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Objects;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.SubKinds;
@@ -14,8 +15,6 @@ using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using Dalamud.Utility.Numerics;
-
-using ImGuiNET;
 
 namespace VariableVixen.PositionalGuide;
 
@@ -80,7 +79,7 @@ public class Plugin: IDalamudPlugin {
 		this.updateCircleColours();
 	}
 
-	private void dtrClickHandler() {
+	private void dtrClickHandler(DtrInteractionEvent e) {
 		this.Config.Enabled = !this.Config.Enabled;
 		this.setDtrText();
 	}

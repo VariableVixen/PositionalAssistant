@@ -3,11 +3,10 @@ using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.InteropServices;
 
+using Dalamud.Bindings.ImGui;
 using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Windowing;
-
-using ImGuiNET;
 
 namespace VariableVixen.PositionalGuide;
 
@@ -261,19 +260,19 @@ public class ConfigWindow: Window, IDisposable {
 		// sliders for numeric modifiers to the lines being drawn
 		ImGui.PushItemWidth(470 * scale);
 
-		changed |= ImGui.SliderScalar("Guideline size modifier", ImGuiDataType.S16, ptrs[0], this.minModifierPtr, this.maxModifierPtr, "%i", ImGuiSliderFlags.AlwaysClamp);
+		changed |= ImGui.SliderScalar("Guideline size modifier", ImGuiDataType.S16, ref ptrs[0], this.minModifierPtr, this.maxModifierPtr, "%i", ImGuiSliderFlags.AlwaysClamp);
 		utils.Tooltip("The positional guidelines normally extend from the target's centre point out to the size of their hitbox. This allows you to make them longer or shorter.");
 
-		changed |= ImGui.SliderScalar("Minimum guideline size", ImGuiDataType.U16, ptrs[1], this.minBoundingPtr, this.maxBoundingPtr, "%i", ImGuiSliderFlags.AlwaysClamp);
+		changed |= ImGui.SliderScalar("Minimum guideline size", ImGuiDataType.U16, ref ptrs[1], this.minBoundingPtr, this.maxBoundingPtr, "%i", ImGuiSliderFlags.AlwaysClamp);
 		utils.Tooltip("Guidelines will always be drawn to at least this length, even if they would ordinarily have been smaller.");
 
-		changed |= ImGui.SliderScalar("Maximum guideline size", ImGuiDataType.U16, ptrs[2], this.minBoundingPtr, this.maxBoundingPtr, "%i", ImGuiSliderFlags.AlwaysClamp);
+		changed |= ImGui.SliderScalar("Maximum guideline size", ImGuiDataType.U16, ref ptrs[2], this.minBoundingPtr, this.maxBoundingPtr, "%i", ImGuiSliderFlags.AlwaysClamp);
 		utils.Tooltip("Guidelines will never be longer than this, no matter how big the target's hitbox is.");
 
-		changed |= ImGui.SliderScalar("Line thickness", ImGuiDataType.U16, ptrs[3], this.minThicknessPtr, this.maxThicknessPtr, "%i", ImGuiSliderFlags.AlwaysClamp);
+		changed |= ImGui.SliderScalar("Line thickness", ImGuiDataType.U16, ref ptrs[3], this.minThicknessPtr, this.maxThicknessPtr, "%i", ImGuiSliderFlags.AlwaysClamp);
 		utils.Tooltip("How wide/thick do you want the lines to be?");
 
-		changed |= ImGui.SliderScalar("Outer circle range", ImGuiDataType.U16, ptrs[4], this.minOuterCircleRangePtr, this.maxOuterCircleRangePtr, "%i", ImGuiSliderFlags.AlwaysClamp);
+		changed |= ImGui.SliderScalar("Outer circle range", ImGuiDataType.U16, ref ptrs[4], this.minOuterCircleRangePtr, this.maxOuterCircleRangePtr, "%i", ImGuiSliderFlags.AlwaysClamp);
 		utils.Tooltip("How big should the outer circle be?"
 			+ "\n"
 			+ "\nValue is an offset to the target circle, and a value of 10 corresponds to 1 yalm."
@@ -282,12 +281,12 @@ public class ConfigWindow: Window, IDisposable {
 		// sliders specifically to control the tether line length
 		ImGui.PushStyleVar(ImGuiStyleVar.Alpha, tether ? 1 : InactiveOptionAlpha);
 
-		changed |= ImGui.SliderScalar("Tether inner max length", ImGuiDataType.S16, ptrs[5], this.negativeOnePtr, this.maxTetherLengthPtr, "%i", ImGuiSliderFlags.AlwaysClamp);
+		changed |= ImGui.SliderScalar("Tether inner max length", ImGuiDataType.S16, ref ptrs[5], this.negativeOnePtr, this.maxTetherLengthPtr, "%i", ImGuiSliderFlags.AlwaysClamp);
 		utils.Tooltip("The inner tether will never extend beyond the centre of the target's hitbox."
 			+ "\n"
 			+ "\nSet to -1 to always go to the centre of the target's hitbox.");
 
-		changed |= ImGui.SliderScalar("Tether outer max length", ImGuiDataType.S16, ptrs[6], this.negativeTwoPtr, this.maxTetherLengthPtr, "%i", ImGuiSliderFlags.AlwaysClamp);
+		changed |= ImGui.SliderScalar("Tether outer max length", ImGuiDataType.S16, ref ptrs[6], this.negativeTwoPtr, this.maxTetherLengthPtr, "%i", ImGuiSliderFlags.AlwaysClamp);
 		utils.Tooltip("The outer tether CAN extend beyond your hitbox."
 			+ "\n"
 			+ "\nSet to -1 to always go to the centre of the your hitbox."
