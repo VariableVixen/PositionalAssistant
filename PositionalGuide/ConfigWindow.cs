@@ -12,25 +12,27 @@ namespace VariableVixen.PositionalGuide;
 
 public class ConfigWindow: Window, IDisposable {
 	public const float InactiveOptionAlpha = 0.5f;
+	public const byte
+		MinGuidelineSize = 0,
+		MaxGuidelineSize = byte.MaxValue;
+	public const sbyte
+		MinGuidelineMod = sbyte.MinValue,
+		MaxGuidelineMod = sbyte.MaxValue;
+	public const byte
+		MinLineThickness = 1,
+		MaxLineThickness = 5;
+	public const byte
+		MinOuterCircleRange = byte.MinValue,
+		MaxOuterCircleRange = byte.MaxValue;
+	public const sbyte
+		MinTetherLengthInner = -1,
+		MinTetherLengthOuter = -2,
+		MaxTetherLength = 32;
 
 	private const ImGuiWindowFlags WindowFlags = ImGuiWindowFlags.None
 		//| ImGuiWindowFlags.NoScrollbar
 		//| ImGuiWindowFlags.NoScrollWithMouse
 		| ImGuiWindowFlags.AlwaysAutoResize;
-	private const int PtrMemWidth = sizeof(short);
-
-	private readonly nint stepPtr;
-	private readonly nint minBoundingPtr;
-	private readonly nint maxBoundingPtr;
-	private readonly nint minModifierPtr;
-	private readonly nint maxModifierPtr;
-	private readonly nint minThicknessPtr;
-	private readonly nint maxThicknessPtr;
-	private readonly nint minOuterCircleRangePtr;
-	private readonly nint maxOuterCircleRangePtr;
-	private readonly nint negativeOnePtr;
-	private readonly nint negativeTwoPtr;
-	private readonly nint maxTetherLengthPtr;
 
 	private bool disposed;
 
@@ -64,38 +66,13 @@ public class ConfigWindow: Window, IDisposable {
 				},
 			}
 		];
-		this.AllowClickthrough = true;
+		this.AllowClickthrough = false;
 		this.AllowPinning = true;
 		this.SizeConstraints = new() {
 			MaximumSize = new(700, 900),
 		};
 
 		this.conf = core.Config;
-
-		this.stepPtr = Marshal.AllocHGlobal(PtrMemWidth);
-		this.minBoundingPtr = Marshal.AllocHGlobal(PtrMemWidth);
-		this.maxBoundingPtr = Marshal.AllocHGlobal(PtrMemWidth);
-		this.minModifierPtr = Marshal.AllocHGlobal(PtrMemWidth);
-		this.maxModifierPtr = Marshal.AllocHGlobal(PtrMemWidth);
-		this.minThicknessPtr = Marshal.AllocHGlobal(PtrMemWidth);
-		this.maxThicknessPtr = Marshal.AllocHGlobal(PtrMemWidth);
-		this.minOuterCircleRangePtr = Marshal.AllocHGlobal(PtrMemWidth);
-		this.maxOuterCircleRangePtr = Marshal.AllocHGlobal(PtrMemWidth);
-		this.negativeOnePtr = Marshal.AllocHGlobal(PtrMemWidth);
-		this.negativeTwoPtr = Marshal.AllocHGlobal(PtrMemWidth);
-		this.maxTetherLengthPtr = Marshal.AllocHGlobal(PtrMemWidth);
-		Marshal.Copy(BitConverter.GetBytes((short)1), 0, this.stepPtr, PtrMemWidth);
-		Marshal.Copy(BitConverter.GetBytes((short)byte.MinValue), 0, this.minBoundingPtr, PtrMemWidth);
-		Marshal.Copy(BitConverter.GetBytes((short)byte.MaxValue), 0, this.maxBoundingPtr, PtrMemWidth);
-		Marshal.Copy(BitConverter.GetBytes((short)sbyte.MinValue), 0, this.minModifierPtr, PtrMemWidth);
-		Marshal.Copy(BitConverter.GetBytes((short)sbyte.MaxValue), 0, this.maxModifierPtr, PtrMemWidth);
-		Marshal.Copy(BitConverter.GetBytes((short)1), 0, this.minThicknessPtr, PtrMemWidth);
-		Marshal.Copy(BitConverter.GetBytes((short)5), 0, this.maxThicknessPtr, PtrMemWidth);
-		Marshal.Copy(BitConverter.GetBytes((short)byte.MinValue), 0, this.minOuterCircleRangePtr, PtrMemWidth);
-		Marshal.Copy(BitConverter.GetBytes((short)byte.MaxValue), 0, this.maxOuterCircleRangePtr, PtrMemWidth);
-		Marshal.Copy(BitConverter.GetBytes((short)-1), 0, this.negativeOnePtr, PtrMemWidth);
-		Marshal.Copy(BitConverter.GetBytes((short)-2), 0, this.negativeTwoPtr, PtrMemWidth);
-		Marshal.Copy(BitConverter.GetBytes((short)32), 0, this.maxTetherLengthPtr, PtrMemWidth);
 	}
 
 	public override void Draw() {
@@ -117,20 +94,16 @@ public class ConfigWindow: Window, IDisposable {
 		Vector4[] colours = this.conf.LineColours;
 
 		// used to chunk-copy values for the sliders in the config window, since ImGui uses pointers to the values
-		short[] hack = [
-			this.conf.ExtraDrawRange,
-			this.conf.MinDrawRange,
-			this.conf.MaxDrawRange,
-			this.conf.LineThickness,
-			this.conf.OuterCircleRange,
-			this.conf.TetherLengthInner,
-			this.conf.TetherLengthOuter,
-		];
-		nint[] ptrs = new nint[hack.Length];
-		for (int i = 0; i < hack.Length; ++i) {
-			ptrs[i] = Marshal.AllocHGlobal(PtrMemWidth);
-			Marshal.Copy(BitConverter.GetBytes(hack[i]), 0, ptrs[i], PtrMemWidth);
-		}
+		sbyte
+			guideLengthMod = this.conf.ExtraDrawRange;
+		byte
+			minGuideLength = this.conf.MinDrawRange,
+			maxGuideLength = this.conf.MaxDrawRange;
+		byte lineThickness = this.conf.LineThickness;
+		byte outerCircleDistance = this.conf.OuterCircleRange;
+		sbyte
+			tetherLengthInner = this.conf.TetherLengthInner,
+			tetherLengthOuter = this.conf.TetherLengthOuter;
 
 		bool active = this.conf.Enabled;
 		bool tether = this.conf.DrawTetherLine;
@@ -260,19 +233,19 @@ public class ConfigWindow: Window, IDisposable {
 		// sliders for numeric modifiers to the lines being drawn
 		ImGui.PushItemWidth(470 * scale);
 
-		changed |= ImGui.SliderScalar("Guideline size modifier", ImGuiDataType.S16, ref ptrs[0], this.minModifierPtr, this.maxModifierPtr, "%i", ImGuiSliderFlags.AlwaysClamp);
+		changed |= ImGui.SliderScalar("Guideline size modifier", ImGuiDataType.S8, ref guideLengthMod, MinGuidelineMod, MaxGuidelineMod, "%i", ImGuiSliderFlags.AlwaysClamp);
 		utils.Tooltip("The positional guidelines normally extend from the target's centre point out to the size of their hitbox. This allows you to make them longer or shorter.");
 
-		changed |= ImGui.SliderScalar("Minimum guideline size", ImGuiDataType.U16, ref ptrs[1], this.minBoundingPtr, this.maxBoundingPtr, "%i", ImGuiSliderFlags.AlwaysClamp);
+		changed |= ImGui.SliderScalar("Minimum guideline size", ImGuiDataType.U8, ref minGuideLength, MinGuidelineSize, MaxGuidelineSize, "%i", ImGuiSliderFlags.AlwaysClamp);
 		utils.Tooltip("Guidelines will always be drawn to at least this length, even if they would ordinarily have been smaller.");
 
-		changed |= ImGui.SliderScalar("Maximum guideline size", ImGuiDataType.U16, ref ptrs[2], this.minBoundingPtr, this.maxBoundingPtr, "%i", ImGuiSliderFlags.AlwaysClamp);
+		changed |= ImGui.SliderScalar("Maximum guideline size", ImGuiDataType.U8, ref maxGuideLength, MinGuidelineSize, MaxGuidelineSize, "%i", ImGuiSliderFlags.AlwaysClamp);
 		utils.Tooltip("Guidelines will never be longer than this, no matter how big the target's hitbox is.");
 
-		changed |= ImGui.SliderScalar("Line thickness", ImGuiDataType.U16, ref ptrs[3], this.minThicknessPtr, this.maxThicknessPtr, "%i", ImGuiSliderFlags.AlwaysClamp);
+		changed |= ImGui.SliderScalar("Line thickness", ImGuiDataType.U8, ref lineThickness, MinLineThickness, MaxLineThickness, "%i", ImGuiSliderFlags.AlwaysClamp);
 		utils.Tooltip("How wide/thick do you want the lines to be?");
 
-		changed |= ImGui.SliderScalar("Outer circle range", ImGuiDataType.U16, ref ptrs[4], this.minOuterCircleRangePtr, this.maxOuterCircleRangePtr, "%i", ImGuiSliderFlags.AlwaysClamp);
+		changed |= ImGui.SliderScalar("Outer circle range", ImGuiDataType.U8, ref outerCircleDistance, MinOuterCircleRange, MaxOuterCircleRange, "%i", ImGuiSliderFlags.AlwaysClamp);
 		utils.Tooltip("How big should the outer circle be?"
 			+ "\n"
 			+ "\nValue is an offset to the target circle, and a value of 10 corresponds to 1 yalm."
@@ -281,12 +254,12 @@ public class ConfigWindow: Window, IDisposable {
 		// sliders specifically to control the tether line length
 		ImGui.PushStyleVar(ImGuiStyleVar.Alpha, tether ? 1 : InactiveOptionAlpha);
 
-		changed |= ImGui.SliderScalar("Tether inner max length", ImGuiDataType.S16, ref ptrs[5], this.negativeOnePtr, this.maxTetherLengthPtr, "%i", ImGuiSliderFlags.AlwaysClamp);
+		changed |= ImGui.SliderScalar("Tether inner max length", ImGuiDataType.S8, ref tetherLengthInner, MinTetherLengthInner, MaxTetherLength, "%i", ImGuiSliderFlags.AlwaysClamp);
 		utils.Tooltip("The inner tether will never extend beyond the centre of the target's hitbox."
 			+ "\n"
 			+ "\nSet to -1 to always go to the centre of the target's hitbox.");
 
-		changed |= ImGui.SliderScalar("Tether outer max length", ImGuiDataType.S16, ref ptrs[6], this.negativeTwoPtr, this.maxTetherLengthPtr, "%i", ImGuiSliderFlags.AlwaysClamp);
+		changed |= ImGui.SliderScalar("Tether outer max length", ImGuiDataType.S8, ref tetherLengthOuter, MinTetherLengthOuter, MaxTetherLength, "%i", ImGuiSliderFlags.AlwaysClamp);
 		utils.Tooltip("The outer tether CAN extend beyond your hitbox."
 			+ "\n"
 			+ "\nSet to -1 to always go to the centre of the your hitbox."
@@ -330,8 +303,6 @@ public class ConfigWindow: Window, IDisposable {
 		}
 
 		if (changed) {
-			for (int i = 0; i < hack.Length; ++i)
-				Marshal.Copy(ptrs[i], hack, i, 1);
 			this.conf.Enabled = active;
 			this.conf.DrawOnPlayers = players;
 			this.conf.DrawTetherLine = tether;
@@ -343,21 +314,18 @@ public class ConfigWindow: Window, IDisposable {
 			this.conf.AlwaysUseCircleColours = circleColours[0];
 			this.conf.AlwaysUseCircleColoursTarget = circleColours[1];
 			this.conf.AlwaysUseCircleColoursOuter = circleColours[2];
-			this.conf.ExtraDrawRange = hack[0];
-			this.conf.MinDrawRange = hack[1];
-			this.conf.MaxDrawRange = hack[2];
-			this.conf.LineThickness = hack[3];
-			this.conf.OuterCircleRange = hack[4];
-			this.conf.TetherLengthInner = hack[5];
-			this.conf.TetherLengthOuter = hack[6];
+			this.conf.ExtraDrawRange = guideLengthMod;
+			this.conf.MinDrawRange = minGuideLength;
+			this.conf.MaxDrawRange = maxGuideLength;
+			this.conf.LineThickness = lineThickness;
+			this.conf.OuterCircleRange = outerCircleDistance;
+			this.conf.TetherLengthInner = tetherLengthInner;
+			this.conf.TetherLengthOuter = tetherLengthOuter;
 			this.conf.DrawGuides = drawing;
 			this.conf.LineColours = colours;
 			Plugin.Interface.SavePluginConfig(this.conf);
 			this.OnSettingsUpdate?.Invoke();
 		}
-
-		for (int i = 0; i < ptrs.Length; ++i)
-			Marshal.FreeHGlobal(ptrs[i]);
 	}
 
 	#region Disposable
@@ -370,18 +338,7 @@ public class ConfigWindow: Window, IDisposable {
 			// nop
 		}
 
-		Marshal.FreeHGlobal(this.stepPtr);
-		Marshal.FreeHGlobal(this.minBoundingPtr);
-		Marshal.FreeHGlobal(this.maxBoundingPtr);
-		Marshal.FreeHGlobal(this.minModifierPtr);
-		Marshal.FreeHGlobal(this.maxModifierPtr);
-		Marshal.FreeHGlobal(this.minThicknessPtr);
-		Marshal.FreeHGlobal(this.maxThicknessPtr);
-		Marshal.FreeHGlobal(this.minOuterCircleRangePtr);
-		Marshal.FreeHGlobal(this.maxOuterCircleRangePtr);
-		Marshal.FreeHGlobal(this.negativeOnePtr);
-		Marshal.FreeHGlobal(this.negativeTwoPtr);
-		Marshal.FreeHGlobal(this.maxTetherLengthPtr);
+		// nop
 	}
 
 	~ConfigWindow() {

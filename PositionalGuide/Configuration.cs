@@ -62,13 +62,13 @@ public class Configuration: IPluginConfiguration {
 		false, // outer circle
 	];
 
-	public short ExtraDrawRange { get; set; } = 0;
-	public short MinDrawRange { get; set; } = 0;
-	public short MaxDrawRange { get; set; } = byte.MaxValue;
-	public short LineThickness { get; set; } = 3;
-	public short OuterCircleRange { get; set; } = 35;
-	public short TetherLengthInner { get; set; } = -1; // if -1, go to centre of target's hitbox
-	public short TetherLengthOuter { get; set; } = -1; // if -1, go to CENTRE of player's hitbox; if -2, go to EDGE of player's hitbox
+	public sbyte ExtraDrawRange { get; set; } = 0;
+	public byte MinDrawRange { get; set; } = 0;
+	public byte MaxDrawRange { get; set; } = byte.MaxValue;
+	public byte LineThickness { get; set; } = 3;
+	public byte OuterCircleRange { get; set; } = 35;
+	public sbyte TetherLengthInner { get; set; } = -1; // if -1, go to centre of target's hitbox
+	public sbyte TetherLengthOuter { get; set; } = -1; // if -1, go to CENTRE of player's hitbox; if -2, go to EDGE of player's hitbox
 
 	public Vector4 TetherColour { get; set; } = new(1);
 
