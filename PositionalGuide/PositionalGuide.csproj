@@ -2,7 +2,7 @@
 <Project Sdk="Dalamud.NET.Sdk/13.0.0">
 	<PropertyGroup>
 		<Product>PositionalGuide</Product>
-		<Version>4.7.2</Version>
+		<Version>4.7.3</Version>
 		<Description>Provides drawn guidelines to see where you need to stand to hit enemies with positionals</Description>
 		<Copyright>Copyleft VariableVixen 2022</Copyright>
 		<PackageProjectUrl>https://github.com/VariableVixen/PositionalAssistant</PackageProjectUrl>
