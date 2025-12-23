@@ -43,6 +43,7 @@ public class Plugin: IDalamudPlugin {
 	[PluginService] public static ITargetManager Targets { get; private set; } = null!;
 	[PluginService] public static IPluginLog Log { get; private set; } = null!;
 	[PluginService] public static INotificationManager Notifications { get; private set; } = null!;
+	[PluginService] public static IObjectTable Objects { get; private set; } = null!;
 
 	public Configuration Config { get; private set; }
 
@@ -117,13 +118,13 @@ public class Plugin: IDalamudPlugin {
 		if (Targets.Target is not IBattleNpc target)
 			return;
 
-		if (Client.LocalPlayer is not IPlayerCharacter player)
+		if (Objects.LocalPlayer is not IPlayerCharacter player)
 			return;
 
 		if (target.ObjectKind is ObjectKind.Player) {
 			if (!this.Config.DrawOnPlayers)
 				return;
-			if (target != Client.LocalPlayer && this.Config.DrawOnSelfOnly)
+			if (target != Objects.LocalPlayer && this.Config.DrawOnSelfOnly)
 				return;
 		}
 
