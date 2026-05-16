@@ -121,7 +121,7 @@ public class Plugin: IDalamudPlugin {
 		if (Objects.LocalPlayer is not IPlayerCharacter player)
 			return;
 
-		if (target.ObjectKind is ObjectKind.Player) {
+		if (target.ObjectKind is ObjectKind.Pc) {
 			if (!this.Config.DrawOnPlayers)
 				return;
 			if (target != Objects.LocalPlayer && this.Config.DrawOnSelfOnly)
