@@ -44,6 +44,7 @@ public class Plugin: IDalamudPlugin {
 	[PluginService] public static IPluginLog Log { get; private set; } = null!;
 	[PluginService] public static INotificationManager Notifications { get; private set; } = null!;
 	[PluginService] public static IObjectTable Objects { get; private set; } = null!;
+	[PluginService] public static IJobGauges Gauges { get; private set; } = null!;
 
 	public Configuration Config { get; private set; }
 
@@ -164,15 +165,31 @@ public class Plugin: IDalamudPlugin {
 		if (!targetOnScreen && !limitEither && limitInner)
 			return;
 
+		// which side of the target does the next weaponskill want to be hit from, if any
+		RequiredPositional positional = this.Config.HighlightPositionals
+			? Positionals.Detect(player, this.Config)
+			: RequiredPositional.None;
+
 		// +X = east, -X = west
 		// +Z = south, -Z = north
 		Vector3 guidelineBasePoint2 = targetPos + new Vector3(0, 0, length);
 		Vector3 circleBasePoint = targetPos + new Vector3(0, 0, target.HitboxRadius);
+
 		bool anyLineActive = false;
+		for (int lineIndex = Configuration.IndexFront; lineIndex <= Configuration.IndexFrontLeft; ++lineIndex) {
+			if (this.Config.DrawGuides[lineIndex]) {
+				anyLineActive = true;
+				break;
+			}
+		}
+
+		// the shaded wedges go down first so that every line and circle draws on top of them
+		if (positional is not RequiredPositional.None && this.Config.FillPositionalZones && targetOnScreen)
+			this.fillPositionalZones(drawing, targetPos, centre, targetFacing, length, positional);
+
 		for (int lineIndex = Configuration.IndexFront; lineIndex <= Configuration.IndexFrontLeft; ++lineIndex) {
 			if (!this.Config.DrawGuides[lineIndex])
 				continue;
-			anyLineActive = true;
 
 			Vector3 rotated = rotatePoint(targetPos, guidelineBasePoint2, targetFacing + this.lineIndexToAngle[lineIndex]);
 			bool endpointOnScreen = Gui.WorldToScreen(rotated, out Vector2 coord);
@@ -183,14 +200,14 @@ public class Plugin: IDalamudPlugin {
 			else if (limitOuter && !endpointOnScreen) {
 				continue;
 			}
-			drawing.AddLine(centre, coord, ImGui.GetColorU32(this.Config.LineColours[lineIndex]), this.Config.LineThickness);
+			drawing.AddLine(centre, coord, ImGui.GetColorU32(this.resolveLineColour(lineIndex, positional)), this.Config.LineThickness);
 		}
 
 		if (this.Config.DrawCircle)
-			this.drawCircle(drawing, targetPos, circleBasePoint, targetFacing, anyLineActive, CircleTypes.Target);
+			this.drawCircle(drawing, targetPos, circleBasePoint, targetFacing, anyLineActive, CircleTypes.Target, positional);
 
 		if (this.Config.DrawOuterCircle)
-			this.drawCircle(drawing, targetPos, circleBasePoint, targetFacing, anyLineActive, CircleTypes.Outer);
+			this.drawCircle(drawing, targetPos, circleBasePoint, targetFacing, anyLineActive, CircleTypes.Outer, positional);
 
 		// the tether line itself used to be pretty simple: from our position to the target's
 		// then I decided to allow controlling the maximum length of it and suddenly everything got Complicated
@@ -247,10 +264,89 @@ public class Plugin: IDalamudPlugin {
 		ImGui.End();
 	}
 
-	private void drawCircle(ImDrawListPtr drawing, Vector3 targetPos, Vector3 basePoint, float targetFacing, bool anyLineActive, CircleTypes circleType) {
+	/// <summary>
+	/// Whether a guideline belongs to the zone the next weaponskill wants. Each 90° positional cone is
+	/// bounded by two diagonal guidelines and bisected by a cardinal one, so the boundaries can either
+	/// count as part of the cone they enclose or be left to the cone on the other side of them.
+	/// </summary>
+	private static bool lineIsInZone(int lineIndex, RequiredPositional positional, bool includeBoundaries) => positional switch {
+		RequiredPositional.Rear => lineIndex is Configuration.IndexBack
+			|| (includeBoundaries && lineIndex is Configuration.IndexBackRight or Configuration.IndexBackLeft),
+		RequiredPositional.Flank => lineIndex is Configuration.IndexRight or Configuration.IndexLeft
+			|| (includeBoundaries && lineIndex is Configuration.IndexFrontRight or Configuration.IndexBackRight
+				or Configuration.IndexBackLeft or Configuration.IndexFrontLeft),
+		_ => false,
+	};
+
+	/// <summary>
+	/// Whether a circle/fill segment falls inside the cone the next weaponskill wants. Segment 0 sits on
+	/// the target's front and they run clockwise, so eighths of the circle line up with the guidelines.
+	/// </summary>
+	private static bool segmentIsInZone(int segmentIndex, RequiredPositional positional) {
+		int eighth = segmentIndex * 8 / CircleSegmentCount;
+		return positional switch {
+			RequiredPositional.Rear => eighth is 3 or 4,
+			RequiredPositional.Flank => eighth is 1 or 2 or 5 or 6,
+			_ => false,
+		};
+	}
+
+	private Vector4 resolveLineColour(int lineIndex, RequiredPositional positional)
+		=> positional is RequiredPositional.None
+			? this.Config.LineColours[lineIndex]
+			: lineIsInZone(lineIndex, positional, this.Config.PositionalIncludeBoundaryLines)
+				? this.Config.PositionalGoodColour
+				: this.Config.PositionalBadColour;
+
+	private Vector4 resolveSegmentColour(int segmentIndex, RequiredPositional positional)
+		=> segmentIsInZone(segmentIndex, positional)
+			? this.Config.PositionalGoodColour
+			: this.Config.PositionalBadColour;
+
+	/// <summary>
+	/// Shades the area enclosed by the guidelines, so the correct cone reads as a solid wedge of colour
+	/// rather than something to be inferred from which lines changed.
+	/// </summary>
+	private void fillPositionalZones(ImDrawListPtr drawing, Vector3 targetPos, Vector2 centre, float targetFacing, float radius, RequiredPositional positional) {
+		if (this.Config.PositionalFillOpacity is 0)
+			return;
+
+		Vector3 startPoint = rotatePoint(targetPos, targetPos + new Vector3(0, 0, radius), targetFacing);
+		Vector3[] points = circlePoints(targetPos, startPoint, this.circleSegmentIdxToAngle).ToArray();
+
+		(Vector2 point, bool render)[] screenPoints = new (Vector2 point, bool render)[points.Length];
+		for (int i = 0; i < points.Length; ++i) {
+			bool render = Gui.WorldToScreen(points[i], out Vector2 screenPoint);
+			screenPoints[i] = (screenPoint, render);
+		}
+
+		float opacity = this.Config.PositionalFillOpacity / 255f;
+
+		// the fan's triangles share their edges exactly, so they tile seamlessly - but each one's antialiasing
+		// fringe would blend over its neighbour's and leave 128 spokes radiating out of the target, so the fill
+		// gets drawn unantialiased and the flag is put back immediately afterwards
+		ImDrawListFlags originalFlags = drawing.Flags;
+		drawing.Flags &= ~ImDrawListFlags.AntiAliasedFill;
+
+		for (int i = 0; i < screenPoints.Length; ++i) {
+			int nextIndex = (i + 1) % screenPoints.Length;
+			if (!screenPoints[i].render || !screenPoints[nextIndex].render)
+				continue;
+
+			Vector4 colour = this.resolveSegmentColour(i, positional);
+			colour.W *= opacity;
+
+			drawing.AddTriangleFilled(centre, screenPoints[i].point, screenPoints[nextIndex].point, ImGui.GetColorU32(colour));
+		}
+
+		drawing.Flags = originalFlags;
+	}
+
+	private void drawCircle(ImDrawListPtr drawing, Vector3 targetPos, Vector3 basePoint, float targetFacing, bool anyLineActive, CircleTypes circleType, RequiredPositional positional) {
 		Vector4 circleColour = new(1, 0, 0, 1);
 		Vector3 circleBasePoint = basePoint;
 		bool forceCircleColour = false;
+		bool usePositionalColours = positional is not RequiredPositional.None && this.Config.PositionalColourCircles;
 
 		switch (circleType) {
 			case CircleTypes.Target:
@@ -281,7 +377,9 @@ public class Plugin: IDalamudPlugin {
 #pragma warning restore IDE0042 // Deconstruct variable declaration
 
 			if (curPoint.render && nextPoint.render) {
-				Vector4 colour = forceCircleColour ? circleColour : this.circleSegmentIdxToColour[i];
+				Vector4 colour = usePositionalColours
+					? this.resolveSegmentColour(i, positional)
+					: forceCircleColour ? circleColour : this.circleSegmentIdxToColour[i];
 				drawing.AddLine(curPoint.point, nextPoint.point, ImGui.GetColorU32(colour), this.Config.LineThickness + 2);
 			}
 		}
@@ -433,6 +531,15 @@ public class Plugin: IDalamudPlugin {
 				this.Config.DrawFrontLeft = state ?? !this.Config.DrawFrontLeft;
 				this.Config.DrawCircle = state ?? !this.Config.DrawCircle;
 				this.Config.DrawOuterCircle = state ?? !this.Config.DrawOuterCircle;
+				break;
+			case "p":
+			case "positional":
+			case "positionals":
+				this.Config.HighlightPositionals = state ?? !this.Config.HighlightPositionals;
+				break;
+			case "fill":
+			case "shading":
+				this.Config.FillPositionalZones = state ?? !this.Config.FillPositionalZones;
 				break;
 			case "tether":
 				this.Config.DrawTetherLine = state ?? !this.Config.DrawTetherLine;

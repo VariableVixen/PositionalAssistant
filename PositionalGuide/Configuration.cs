@@ -46,6 +46,16 @@ public class Configuration: IPluginConfiguration {
 	public bool AlwaysUseCircleColoursTarget { get; set; } = false;
 	public bool AlwaysUseCircleColoursOuter { get; set; } = false;
 
+	public bool HighlightPositionals { get; set; } = false;
+	public bool HighlightDuringPerfectBalance { get; set; } = true;
+	public bool PositionalIncludeBoundaryLines { get; set; } = true;
+	public bool PositionalColourCircles { get; set; } = true;
+	public bool FillPositionalZones { get; set; } = true;
+	public byte PositionalFillOpacity { get; set; } = 48;
+
+	public Vector4 PositionalGoodColour { get; set; } = new(0, 1, 0, 1);
+	public Vector4 PositionalBadColour { get; set; } = new(1, 0, 0, 1);
+
 	/// <summary>
 	/// Starts at front then goes clockwise up to index=7, then circle at index=8
 	/// </summary>

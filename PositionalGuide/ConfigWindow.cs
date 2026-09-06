@@ -28,6 +28,9 @@ public class ConfigWindow: Window, IDisposable {
 		MinTetherLengthInner = -1,
 		MinTetherLengthOuter = -2,
 		MaxTetherLength = 32;
+	public const byte
+		MinFillOpacity = byte.MinValue,
+		MaxFillOpacity = byte.MaxValue;
 
 	private const ImGuiWindowFlags WindowFlags = ImGuiWindowFlags.None
 		//| ImGuiWindowFlags.NoScrollbar
@@ -104,6 +107,16 @@ public class ConfigWindow: Window, IDisposable {
 		sbyte
 			tetherLengthInner = this.conf.TetherLengthInner,
 			tetherLengthOuter = this.conf.TetherLengthOuter;
+
+		byte positionalFillOpacity = this.conf.PositionalFillOpacity;
+
+		bool highlightPositionals = this.conf.HighlightPositionals;
+		bool highlightDuringPerfectBalance = this.conf.HighlightDuringPerfectBalance;
+		bool positionalIncludeBoundaryLines = this.conf.PositionalIncludeBoundaryLines;
+		bool positionalColourCircles = this.conf.PositionalColourCircles;
+		bool fillPositionalZones = this.conf.FillPositionalZones;
+		Vector4 positionalGoodColour = this.conf.PositionalGoodColour;
+		Vector4 positionalBadColour = this.conf.PositionalBadColour;
 
 		bool active = this.conf.Enabled;
 		bool tether = this.conf.DrawTetherLine;
@@ -230,6 +243,61 @@ public class ConfigWindow: Window, IDisposable {
 
 		ImGui.PopStyleVar();
 
+		// live positional highlighting, driven by whichever weaponskill is coming up next
+		ImGui.TextUnformatted("");
+		changed |= ImGui.Checkbox("Highlight the positional your next attack wants?", ref highlightPositionals);
+		utils.Tooltip("While this is on and you're playing a job the plugin understands, the guides stop using the colours"
+			+ " set above and instead colour the correct side of your target with the 'correct' colour below, and every"
+			+ " other side with the 'incorrect' colour."
+			+ "\n"
+			+ "\nMonk is currently the only job with support. As of Dawntrail its only positionals are both in coeurl form:"
+			+ " Demolish wants the rear, and Snap Punch / Pouncing Coeurl wants a flank. The plugin reads your Coeurl's Fury"
+			+ " stacks to know which of the two is coming, since Demolish grants them and Pouncing Coeurl spends them."
+			+ "\n"
+			+ "\nOn any other job, or outside coeurl form, your normal colours above are used instead.");
+
+		ImGui.PushStyleVar(ImGuiStyleVar.Alpha, highlightPositionals ? 1 : InactiveOptionAlpha);
+		ImGui.Indent();
+
+		changed |= ImGui.ColorEdit4("Colour for the correct side", ref positionalGoodColour, ImGuiColorEditFlags.NoInputs);
+		changed |= ImGui.ColorEdit4("Colour for the incorrect sides", ref positionalBadColour, ImGuiColorEditFlags.NoInputs);
+
+		changed |= ImGui.Checkbox("Keep highlighting during Perfect Balance?", ref highlightDuringPerfectBalance);
+		utils.Tooltip("Perfect Balance hides your form and lets you use any of them, so there's no form to read."
+			+ " With this on, the rear is highlighted for the whole window, because Demolish is the coeurl-chakra filler"
+			+ " and nothing else monk presses under Perfect Balance has a positional at all, so the rear is never the"
+			+ " wrong place to be standing."
+			+ "\n"
+			+ "\nWith this off, highlighting simply switches off until the window ends.");
+
+		changed |= ImGui.Checkbox("Count the diagonal guidelines as part of the correct side?", ref positionalIncludeBoundaryLines);
+		utils.Tooltip("Each positional cone is 90 degrees wide, bounded by two diagonal guidelines and cut down the middle"
+			+ " by a cardinal one."
+			+ "\n"
+			+ "\nWith this on, a cone's two boundary lines are coloured as part of it, so you can see exactly how far it"
+			+ " extends. With this off, only the cardinal line through the middle of the cone is coloured.");
+
+		changed |= ImGui.Checkbox("Recolour the circles to match?", ref positionalColourCircles);
+		utils.Tooltip("While a positional is being highlighted, colour the target circle and outer circle by side as well,"
+			+ " overriding the circle colour options above.");
+
+		changed |= ImGui.Checkbox("Shade in the correct and incorrect sides?", ref fillPositionalZones);
+		utils.Tooltip("Fills the area enclosed by the guidelines, so the correct side reads as a solid wedge of colour"
+			+ " instead of something you have to work out from which lines changed.");
+
+		ImGui.PushStyleVar(ImGuiStyleVar.Alpha, highlightPositionals && fillPositionalZones ? 1 : InactiveOptionAlpha);
+		ImGui.PushItemWidth(300 * scale);
+		changed |= ImGui.SliderScalar("Shading opacity", ImGuiDataType.U8, ref positionalFillOpacity, MinFillOpacity, MaxFillOpacity, "%i", ImGuiSliderFlags.AlwaysClamp);
+		utils.Tooltip("How solid the shading is, from 0 (invisible) to 255 (completely opaque)."
+			+ "\n"
+			+ "\nLow values are recommended, since the shading covers your target.");
+		ImGui.PopItemWidth();
+		ImGui.PopStyleVar();
+
+		ImGui.Unindent();
+		ImGui.PopStyleVar();
+		ImGui.TextUnformatted("");
+
 		// sliders for numeric modifiers to the lines being drawn
 		ImGui.PushItemWidth(470 * scale);
 
@@ -298,6 +366,12 @@ public class ConfigWindow: Window, IDisposable {
 			ImGui.TextUnformatted("");
 			ImGui.TextUnformatted("Additionally, you can use 'cardinal', 'cardinals', 'diagonal', 'diagonals', 'lines', and 'all' to affect multiple lines with a single command.");
 			ImGui.TextUnformatted("");
+			ImGui.TextUnformatted("Positional highlighting has its own targets:");
+			ImGui.Indent();
+			ImGui.TextUnformatted("For the highlighting itself: p, positional, positionals");
+			ImGui.TextUnformatted("For the shading: fill, shading");
+			ImGui.Unindent();
+			ImGui.TextUnformatted("");
 			ImGui.TextUnformatted("Finally, you can use the target 'tether' to toggle tether line rendering, and the target 'render' (the default) to toggle showing guides at all without losing your settings.");
 			ImGui.PopTextWrapPos();
 		}
@@ -314,6 +388,14 @@ public class ConfigWindow: Window, IDisposable {
 			this.conf.AlwaysUseCircleColours = circleColours[0];
 			this.conf.AlwaysUseCircleColoursTarget = circleColours[1];
 			this.conf.AlwaysUseCircleColoursOuter = circleColours[2];
+			this.conf.HighlightPositionals = highlightPositionals;
+			this.conf.HighlightDuringPerfectBalance = highlightDuringPerfectBalance;
+			this.conf.PositionalIncludeBoundaryLines = positionalIncludeBoundaryLines;
+			this.conf.PositionalColourCircles = positionalColourCircles;
+			this.conf.FillPositionalZones = fillPositionalZones;
+			this.conf.PositionalFillOpacity = positionalFillOpacity;
+			this.conf.PositionalGoodColour = positionalGoodColour;
+			this.conf.PositionalBadColour = positionalBadColour;
 			this.conf.ExtraDrawRange = guideLengthMod;
 			this.conf.MinDrawRange = minGuideLength;
 			this.conf.MaxDrawRange = maxGuideLength;
