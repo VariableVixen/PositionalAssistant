@@ -246,15 +246,21 @@ public class ConfigWindow: Window, IDisposable {
 		// live positional highlighting, driven by whichever weaponskill is coming up next
 		ImGui.TextUnformatted("");
 		changed |= ImGui.Checkbox("Highlight the positional your next attack wants?", ref highlightPositionals);
-		utils.Tooltip("While this is on and you're playing a job the plugin understands, the guides stop using the colours"
-			+ " set above and instead colour the correct side of your target with the 'correct' colour below, and every"
-			+ " other side with the 'incorrect' colour."
+		utils.Tooltip("While this is on and you're playing a job with positionals, the guides stop using the colours set"
+			+ " above and instead colour the correct side of your target with the 'correct' colour below, and every other"
+			+ " side with the 'incorrect' colour."
 			+ "\n"
-			+ "\nMonk is currently the only job with support. As of Dawntrail its only positionals are both in coeurl form:"
-			+ " Demolish wants the rear, and Snap Punch / Pouncing Coeurl wants a flank. The plugin reads your Coeurl's Fury"
-			+ " stacks to know which of the two is coming, since Demolish grants them and Pouncing Coeurl spends them."
+			+ "\nSupported jobs, and what each one watches:"
+			+ "\n  Dragoon - the combo. Chaotic Spring and Wheeling Thrust want the rear, Fang and Claw wants a flank."
+			+ "\n  Monk - coeurl form and your Coeurl's Fury. Demolish wants the rear, Pouncing Coeurl wants a flank."
+			+ "\n  Ninja - the combo and your Kazematoi. Aeolian Edge wants the rear, Armor Crush wants a flank."
+			+ "\n  Reaper - your Soul Reaver window. Gallows wants the rear, Gibbet wants a flank."
+			+ "\n  Samurai - the combo. Gekko wants the rear, Kasha wants a flank."
+			+ "\n  Viper - the combo. Swiftskin's Sting leads to the rear pair, Hunter's Sting to the flank pair."
 			+ "\n"
-			+ "\nOn any other job, or outside coeurl form, your normal colours above are used instead.");
+			+ "\nAnywhere the next weaponskill has no positional - a different job, the wrong point in a combo, a reaper"
+			+ " with neither Gibbet nor Gallows enhanced - your normal colours above are used instead, so nothing is"
+			+ " highlighted when nothing needs to be.");
 
 		ImGui.PushStyleVar(ImGuiStyleVar.Alpha, highlightPositionals ? 1 : InactiveOptionAlpha);
 		ImGui.Indent();
@@ -262,7 +268,7 @@ public class ConfigWindow: Window, IDisposable {
 		changed |= ImGui.ColorEdit4("Colour for the correct side", ref positionalGoodColour, ImGuiColorEditFlags.NoInputs);
 		changed |= ImGui.ColorEdit4("Colour for the incorrect sides", ref positionalBadColour, ImGuiColorEditFlags.NoInputs);
 
-		changed |= ImGui.Checkbox("Keep highlighting during Perfect Balance?", ref highlightDuringPerfectBalance);
+		changed |= ImGui.Checkbox("Monk: keep highlighting during Perfect Balance?", ref highlightDuringPerfectBalance);
 		utils.Tooltip("Perfect Balance hides your form and lets you use any of them, so there's no form to read."
 			+ " With this on, the rear is highlighted for the whole window, because Demolish is the coeurl-chakra filler"
 			+ " and nothing else monk presses under Perfect Balance has a positional at all, so the rear is never the"
